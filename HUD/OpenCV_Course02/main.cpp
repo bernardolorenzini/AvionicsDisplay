@@ -66,54 +66,44 @@ void overlayAirspeedLimitsLadder(cv::Mat& frame) {
         }
     }
 }
-int overlaySpeedIndicatorWithMovement(cv::Mat& frame, int speedIndPosition) {
-    
+int overlaySpeedIndicatorWithMovement(cv::Mat& frame, int indicatorY) {
+    cv::Mat SpeedScaleIndicator = cv::imread("/Users/bernardolorenzini/Documents/MyGitRepositories/Textures/Speed_Scale-Indicated_AirSpeed.png", cv::IMREAD_UNCHANGED);
     if (SpeedScaleIndicator.empty()) {
         std::cerr << "Error: Failed to load Speed_Scale-Indicated_AirSpeed.png" << std::endl;
         return -1;
     }
 
-    int indicatorY = 0;
+    // Capture keyboard input
+    int key = cv::waitKey(10);
+
+    if (key == 'w') {
+        indicatorY -= 15; // Move indicator up by adjusting the position
+    } else if (key == 's') {
+        indicatorY += 15; // Move indicator down by adjusting the position
+    }
     
-    if(firstLoop){
-        indicatorY = (frame.rows - SpeedScaleIndicator.rows) / 2; // Initial position
-        firstLoop = false;
-    }
-    else {
-        indicatorY = indicatorY + speedIndPosition;
-        
-    }
-        // Capture keyboard input
-        int key = cv::waitKey(10);
+    // Calculate the overlay position with the updated indicatorY
+    int overlayX = ((frame.cols - SpeedScaleIndicator.cols) / 4) - SpeedScaleIndicator.cols / 2;
 
-        if (key == 'w') {
-            indicatorY -= 15; // Move indicator up by adjusting the position
-        } else if (key == 's') {
-            indicatorY += 15; // Move indicator down by adjusting the position
-        }
-        // Calculate the overlay position with the updated indicatorY
-        int overlayX = ((frame.cols - SpeedScaleIndicator.cols) / 4) - SpeedScaleIndicator.cols / 2;
-
-        // Overlay the speed indicator image on the frame copy using the updated indicatorY
-        for (int y = 0; y < SpeedScaleIndicator.rows; y++) {
-            for (int x = 0; x < SpeedScaleIndicator.cols; x++) {
-                uchar alpha = SpeedScaleIndicator.at<cv::Vec4b>(y, x)[3];
-                if (alpha > 0) {
-                    cv::Point framePos(overlayX + x, indicatorY + y); // Use updated indicatorY
-                    if (framePos.x >= 0 && framePos.x < frame.cols && framePos.y >= 0 && framePos.y < frame.rows) {
-                        for (int c = 0; c < 3; c++) {
-                            frame.at<cv::Vec3b>(framePos.y, framePos.x)[c] =
-                                (alpha * SpeedScaleIndicator.at<cv::Vec4b>(y, x)[c] +
-                                (255 - alpha) * frame.at<cv::Vec3b>(framePos.y, framePos.x)[c]) / 255;
-                        }
+    // Overlay the speed indicator image on the frame using the updated indicatorY
+    for (int y = 0; y < SpeedScaleIndicator.rows; y++) {
+        for (int x = 0; x < SpeedScaleIndicator.cols; x++) {
+            uchar alpha = SpeedScaleIndicator.at<cv::Vec4b>(y, x)[3];
+            if (alpha > 0) {
+                cv::Point framePos(overlayX + x, indicatorY + y); // Use updated indicatorY
+                if (framePos.x >= 0 && framePos.x < frame.cols && framePos.y >= 0 && framePos.y < frame.rows) {
+                    for (int c = 0; c < 3; c++) {
+                        frame.at<cv::Vec3b>(framePos.y, framePos.x)[c] =
+                            (alpha * SpeedScaleIndicator.at<cv::Vec4b>(y, x)[c] +
+                            (255 - alpha) * frame.at<cv::Vec3b>(framePos.y, framePos.x)[c]) / 255;
                     }
                 }
             }
         }
-    return overlayX;
+    }
+
+    return indicatorY; // Return the updated indicatorY value
 }
-
-
 
 /*
  void overlaySpeedIndicator(cv::Mat& frame) {
@@ -158,7 +148,7 @@ int main() {
 
     cv::Mat frame;
     int speedIndPosition = 0;
-    int indicatorY = (frame.rows - SpeedScaleIndicator.rows) / 2; // Initial position
+        int indicatorY = (frame.rows - SpeedScaleIndicator.rows) / 2; // Initial position
 
     while (true) {
         // Capture frames from the camera
@@ -186,7 +176,7 @@ int main() {
         
         overlayAirspeedLimitsLadder(frame);
         // CHANGED ON 08/08overlaySpeedIndicator(frame);
-        speedIndPosition = overlaySpeedIndicatorWithMovement(frame, speedIndPosition);
+        indicatorY = overlaySpeedIndicatorWithMovement(frame, indicatorY);
         // Detect keyboard input
         int key = cv::waitKey(1);
         switch (key) {
