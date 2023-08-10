@@ -5,10 +5,8 @@
 
 
 
-cv::Mat overlayImage = uaRing; // Default symbology (uaRing)
-cv::Mat SpeedScaleIndicator = cv::imread("/Users/bernardolorenzini/Documents/MyGitRepositories/Textures/Speed_Scale-Indicated_AirSpeed.png", cv::IMREAD_UNCHANGED);
+cv::Mat overlayImage = fpvGround; // Default symbology (uaRing)
 
-int firstLoop = true;
 
 void overlayImageOnFrame(cv::Mat& frame, const cv::Mat& overlayImage) {
     // Calculate the position of the top-left corner of the overlay image
@@ -40,8 +38,87 @@ void overlayImageOnFrame(cv::Mat& frame, const cv::Mat& overlayImage) {
     }
 }
 
+void FPV_Excessive_Deviation(cv::Mat& frame){
+    if(fpvExcessiveDeviation.empty()){
+        std::cerr << "Error: Failed to load FPV_Excessive_Deviation.png" << std::endl;
+    }
+    
+    int overlayX = (frame.cols - fpvExcessiveDeviation.cols) / 2;
+    int overlayY = (frame.rows - fpvExcessiveDeviation.rows) / 2;
+    
+    for (int y = 0; y < fpvExcessiveDeviation.rows; y++){
+        for (int x = 0; x < fpvExcessiveDeviation.cols; x++){
+            uchar alpha = fpvExcessiveDeviation.at<cv::Vec4b>(y, x)[3];
+            if (alpha > 0) {
+                cv::Point framePos(overlayX + x, overlayY + y);
+                if (framePos.x >= 0 && framePos.x < frame.cols && framePos.y >= 0 && framePos.y < frame.rows) {
+                    for (int c = 0; c < 3; c++) {
+                        frame.at<cv::Vec3b>(framePos.y, framePos.x)[c] =
+                            (alpha * fpvExcessiveDeviation.at<cv::Vec4b>(y, x)[c] +
+                            (255 - alpha) * frame.at<cv::Vec3b>(framePos.y, framePos.x)[c]) / 255;
+                    }
+                }
+            }
+        }
+        
+    }
+    
+}
+
+void RollScaleTicksDraw(cv::Mat& frame){
+    if(RollScaleTicks.empty()){
+        std::cerr << "Error: Failed to load RollScaleTicks.png" << std::endl;
+    }
+    
+    int overlayX = (frame.cols - RollScaleTicks.cols) / 2;
+    int overlayY = (frame.rows - RollScaleTicks.rows) / 2;
+    
+    for (int y = 0; y < RollScaleTicks.rows; y++){
+        for (int x = 0; x < RollScaleTicks.cols; x++){
+            uchar alpha = RollScaleTicks.at<cv::Vec4b>(y, x)[3];
+            if (alpha > 0) {
+                cv::Point framePos(overlayX + x, overlayY + y);
+                if (framePos.x >= 0 && framePos.x < frame.cols && framePos.y >= 0 && framePos.y < frame.rows) {
+                    for (int c = 0; c < 3; c++) {
+                        frame.at<cv::Vec3b>(framePos.y, framePos.x)[c] =
+                            (alpha * RollScaleTicks.at<cv::Vec4b>(y, x)[c] +
+                            (255 - alpha) * frame.at<cv::Vec3b>(framePos.y, framePos.x)[c]) / 255;
+                    }
+                }
+            }
+        }
+        
+    }
+    
+}
+
+void Gearslockeddown(cv::Mat& frame) {
+    if (Gears_locked_down.empty()) {
+        std::cerr << "Error: Failed to load Airspeed-Limits-Ladder-Middle.png" << std::endl;
+        return;
+    }
+    
+    int overlayX = (frame.cols - Gears_locked_down.cols) / 2; // Adjust the offset as needed
+    int overlayY = (frame.rows - Gears_locked_down.rows) / 2;
+
+    for (int y = 0; y < Gears_locked_down.rows; y++) {
+        for (int x = 0; x < Gears_locked_down.cols; x++) {
+            uchar alpha = Gears_locked_down.at<cv::Vec4b>(y, x)[3];
+            if (alpha > 0) {
+                cv::Point framePos(overlayX + x, overlayY + y);
+                if (framePos.x >= 0 && framePos.x < frame.cols && framePos.y >= 0 && framePos.y < frame.rows) {
+                    for (int c = 0; c < 3; c++) {
+                        frame.at<cv::Vec3b>(framePos.y, framePos.x)[c] =
+                            (alpha * Gears_locked_down.at<cv::Vec4b>(y, x)[c] +
+                            (255 - alpha) * frame.at<cv::Vec3b>(framePos.y, framePos.x)[c]) / 255;
+                    }
+                }
+            }
+        }
+    }
+}
+
 void overlayAirspeedLimitsLadder(cv::Mat& frame) {
-    cv::Mat airspeedLadder = cv::imread("/Users/bernardolorenzini/Documents/MyGitRepositories/Textures/Airspeed-Limits-Ladder-Middle.png", cv::IMREAD_UNCHANGED);
     if (airspeedLadder.empty()) {
         std::cerr << "Error: Failed to load Airspeed-Limits-Ladder-Middle.png" << std::endl;
         return;
@@ -66,21 +143,35 @@ void overlayAirspeedLimitsLadder(cv::Mat& frame) {
         }
     }
 }
+
+
 int overlaySpeedIndicatorWithMovement(cv::Mat& frame, int indicatorY) {
-    cv::Mat SpeedScaleIndicator = cv::imread("/Users/bernardolorenzini/Documents/MyGitRepositories/Textures/Speed_Scale-Indicated_AirSpeed.png", cv::IMREAD_UNCHANGED);
     if (SpeedScaleIndicator.empty()) {
         std::cerr << "Error: Failed to load Speed_Scale-Indicated_AirSpeed.png" << std::endl;
         return -1;
     }
+    static bool isWKeyPressed = false;
+    static bool isSKeyPressed = false;
 
-    // Capture keyboard input
     int key = cv::waitKey(10);
 
+    
     if (key == 'w') {
-        indicatorY -= 15; // Move indicator up by adjusting the position
-    } else if (key == 's') {
-        indicatorY += 15; // Move indicator down by adjusting the position
+        isWKeyPressed = true;
     }
+    else if (key == 's') {
+        isSKeyPressed = true;
+    } else if (key == -1) {  // No key pressed
+        isWKeyPressed = false;
+        isSKeyPressed = false;
+    }
+
+    if (isWKeyPressed) {
+            indicatorY -= 15; // Move indicator up by adjusting the position
+        } else if (isSKeyPressed) {
+            indicatorY += 15; // Move indicator down by adjusting the position
+        }
+
     
     // Calculate the overlay position with the updated indicatorY
     int overlayX = ((frame.cols - SpeedScaleIndicator.cols) / 4) - SpeedScaleIndicator.cols / 2;
@@ -105,35 +196,6 @@ int overlaySpeedIndicatorWithMovement(cv::Mat& frame, int indicatorY) {
     return indicatorY; // Return the updated indicatorY value
 }
 
-/*
- void overlaySpeedIndicator(cv::Mat& frame) {
-    cv::Mat SpeedScaleIndicator = cv::imread("/Users/bernardolorenzini/Documents/MyGitRepositories/Textures/Speed_Scale-Indicated_AirSpeed.png", cv::IMREAD_UNCHANGED);
-    if (SpeedScaleIndicator.empty()) {
-        std::cerr << "Error: Failed to load Speed_Scale-Indicated_AirSpeed.png" << std::endl;
-        return;
-    }
-
-    int overlayX = ((frame.cols - SpeedScaleIndicator.cols) / 4) - SpeedScaleIndicator.cols/2; // Adjust the offset as needed
-    int overlayY = (frame.rows - SpeedScaleIndicator.rows) / 2;
-
-    for (int y = 0; y < SpeedScaleIndicator.rows; y++) {
-        for (int x = 0; x < SpeedScaleIndicator.cols; x++) {
-            uchar alpha = SpeedScaleIndicator.at<cv::Vec4b>(y, x)[3];
-            if (alpha > 0) {
-                cv::Point framePos(overlayX + x, overlayY + y);
-                if (framePos.x >= 0 && framePos.x < frame.cols && framePos.y >= 0 && framePos.y < frame.rows) {
-                    for (int c = 0; c < 3; c++) {
-                        frame.at<cv::Vec3b>(framePos.y, framePos.x)[c] =
-                            (alpha * SpeedScaleIndicator.at<cv::Vec4b>(y, x)[c] +
-                            (255 - alpha) * frame.at<cv::Vec3b>(framePos.y, framePos.x)[c]) / 255;
-                    }
-                }
-            }
-        }
-    }
-}
-
-*/
 int main() {
     // Load pre-trained Haar Cascade classifier for face detection
    /* cv::CascadeClassifier faceCascade;
@@ -147,10 +209,10 @@ int main() {
     
 
     cv::Mat frame;
-    int speedIndPosition = 0;
         int indicatorY = (frame.rows - SpeedScaleIndicator.rows) / 2; // Initial position
 
     while (true) {
+        
         // Capture frames from the camera
         cap.read(frame);
         if (frame.empty())
@@ -173,6 +235,8 @@ int main() {
 
         // Overlay uaRing on the frame
         overlayImageOnFrame(frame, uaRing);
+        
+        RollScaleTicksDraw(frame);
         
         overlayAirspeedLimitsLadder(frame);
         // CHANGED ON 08/08overlaySpeedIndicator(frame);
@@ -201,12 +265,17 @@ int main() {
 
         // Overlay the selected symbology on uaRing background
         overlayImageOnFrame(frame, overlayImage);
+        
+        
+        Gearslockeddown(frame);
+        
+        FPV_Excessive_Deviation(frame);
 
         // Show the final image
         cv::imshow("Overlay", frame);
 
         // Close the output video by pressing 'ESC'
-        int keyEsc = cv::waitKey(5);
+        int keyEsc = cv::waitKey(2);
         if (keyEsc == 27)
             break;
     }
