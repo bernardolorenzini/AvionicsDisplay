@@ -2,6 +2,7 @@
 #include <opencv2/opencv.hpp>
 #include "symbologyUploading.hpp"
 
+//testing drawing in opengl can be an good ideia?
 
 // Define the Position struct for absolute and relative positioning
 struct Position {
