@@ -1,8 +1,13 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <opencv2/core/types.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <cmath>
+
+
 #include "symbologyUploading.hpp"
 
-//testing drawing in opengl can be an good ideia?
 
 // Define the Position struct for absolute and relative positioning
 struct Position {
@@ -181,6 +186,9 @@ void FPV_Excessive_Deviation(cv::Mat& frame, const Position& position) {
     }
 }
 
+
+
+
 int main() {
     // Open camera object
     cv::VideoCapture cap(0);
@@ -189,6 +197,15 @@ int main() {
     cap.set(cv::CAP_PROP_FRAME_HEIGHT, 1024);  //600
 
     cv::Mat frame;
+    cv::Mat bgr2gray_frame;
+    cv::Mat hsv_frame;
+    cv::Mat hsv_mask;    
+    cv::Mat blue_filtered_greyscale;
+
+
+    cv::Scalar lower(109, 0, 116);
+    cv::Scalar upper(153, 255, 255);
+    
     int indicatorY = (frame.rows - SpeedScaleIndicator.rows) / 2; // Initial position
     Position indicatorPosition = {0, 0};
     Position ladderPosition = {0, 0};
@@ -199,8 +216,14 @@ int main() {
     while (true) {
         // Capture frames from the camera
         cap.read(frame);
+        
         if (frame.empty())
             break;
+
+        cv::cvtColor(frame, bgr2gray_frame, cv::COLOR_BGR2GRAY);
+        cv::cvtColor(frame, hsv_frame, cv::COLOR_BGR2HSV);
+        cv::inRange(hsv_frame, lower, upper, hsv_mask);
+        cv::add(bgr2gray_frame, hsv_mask, blue_filtered_greyscale);
 
         // Overlay uaRing on the frame at center position
         overlayImageAtPosition(frame, uaRing, {0, 0});
@@ -258,8 +281,16 @@ int main() {
         // Overlay FPV Excessive Deviation at its specified position
         FPV_Excessive_Deviation(frame, excessiveDeviationPosition);
 
+
+
+
+        
         // Show the final image
         cv::imshow("Overlay", frame);
+        cv::imshow("GRAY", bgr2gray_frame);
+        cv::imshow("hsv_frame", hsv_frame);
+        cv::imshow("hsv_mask", hsv_mask);
+        cv::imshow("blue_filtered_greyscale", blue_filtered_greyscale);
 
         // Close the output video by pressing 'ESC'
         int keyEsc = cv::waitKey(2);
