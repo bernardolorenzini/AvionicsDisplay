@@ -16,6 +16,9 @@
 #include <vector>
 #include <cmath>
 
+const int FULL_ROTATION = 360;
+const int POOLING_KERNEL_SIZE = 5;
+
 class HorizonDetector {
 public:
     HorizonDetector(float exclusion_thresh, float fov, float acceptable_variance, cv::Size frame_shape);
